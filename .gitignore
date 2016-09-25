@@ -1,0 +1,17 @@
+.classpath
+.project
+.settings/
+bin/
+out/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+bin/
+out/
+.idea/
+*.iml
+.DS_Store
+._.DS_Store
+target/

@@ -1,0 +1,105 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:jpa="http://www.springframework.org/schema/data/jpa"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+       xmlns:cache="http://www.springframework.org/schema/cache"
+       xmlns:c="http://www.springframework.org/schema/c" xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context-4.1.xsd
+        http://www.springframework.org/schema/mvc
+        http://www.springframework.org/schema/mvc/spring-mvc-4.1.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd
+        http://www.springframework.org/schema/data/jpa http://www.springframework.org/schema/data/jpa/spring-jpa.xsd
+        http://www.springframework.org/schema/data/mongo
+        http://www.springframework.org/schema/data/mongo/spring-mongo.xsd
+        http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache.xsd
+        http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <!-- Mongo Config starts-->
+    <mongo:mongo replica-set="${mongo.main.db.hosts}" id="mainMongo">
+        <mongo:options connections-per-host="${mongo.main.connections.per.host}"
+                       threads-allowed-to-block-for-connection-multiplier="4"
+                       connect-timeout="${mongo.main.connection.timeout}"
+                       max-wait-time="${mongo.main.max.wait.time}"
+                       auto-connect-retry="true"
+                       socket-keep-alive="true"
+                       socket-timeout="${mongo.main.socket.timeout}"
+                       slave-ok="false"
+                       write-number="1"
+                       write-timeout="0"
+                       write-fsync="true"/>
+    </mongo:mongo>
+
+    <mongo:db-factory id="mainDbFactory" dbname="${mongo.main.db.name}" mongo-ref="mainMongo" username="${mongo.main.db.username}" password="${mongo.main.db.password}"/>
+
+    <bean id="mainMongoTemplate" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg name="mongoDbFactory" ref="mainDbFactory"/>
+    </bean>
+    <mongo:repositories mongo-template-ref="mainMongoTemplate" base-package="com.evolution.cluedo.dao"/>
+    <!-- Mongo Config ends-->
+
+
+
+    <!-- Mysql JPA Config starts-->
+
+    <jpa:repositories base-package="com.evolution.cluedo.dao"
+                      entity-manager-factory-ref="mysqlEntityManagerFactory"
+                      transaction-manager-ref="mysqlTransactionManager"/>
+
+    <tx:annotation-driven transaction-manager="mysqlTransactionManager"/>
+    <context:component-scan base-package="com.evolution.cluedo.common.entity" />
+
+
+    <bean id="mysqlTransactionManager" class="org.springframework.orm.jpa.JpaTransactionManager"
+          p:entityManagerFactory-ref="mysqlEntityManagerFactory"/>
+
+    <bean id="mysqlEntityManagerFactory"
+          class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean"
+          p:dataSource-ref="mysqlDataSource"
+          p:jpaPropertyMap-ref="jpaPropertyMap">
+        <property name="packagesToScan" value="com.evolution.cluedo.common.entity"/>
+        <property name="jpaVendorAdapter">
+            <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter"/>
+        </property>
+        <property name="persistenceUnitName" value="cluedo-persistence-unit"/>
+    </bean>
+
+    <util:map id="jpaPropertyMap">
+        <entry key="javax.persistence.validation.mode" value="auto"/>
+        <entry key="hibernate.dialect" value="org.hibernate.dialect.MySQLDialect"/>
+        <entry key="show_sql" value="true"/>
+    </util:map>
+
+    <bean id="mysqlDataSource" class="org.springframework.jndi.JndiObjectFactoryBean">
+        <property name="jndiName" value="cluedoMysqlDataSourceJndi"/>
+        <property name="defaultObject" ref="mysqlPooledDataSource"/>
+    </bean>
+
+    <bean id="mysqlPooledDataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource"
+          destroy-method="close" autowire-candidate="true">
+        <property name="driverClass" value="${mysql.jdbc.driver}"/>
+        <property name="jdbcUrl" value="${mysql.jdbc.url}"/>
+        <property name="user" value="${mysql.jdbc.username}"/>
+        <property name="password" value="${mysql.jdbc.password}"/>
+        <property name="acquireIncrement" value="${mysql.acquire.increment}"/>
+        <property name="minPoolSize" value="${mysql.min.pool.size}"/>
+        <property name="maxPoolSize" value="${mysql.max.pool.size}"/>
+        <property name="maxStatementsPerConnection" value="${mysql.max.statements.per.connection}"/>
+        <property name="maxStatements" value="${mysql.max.statements}"/>
+        <property name="numHelperThreads" value="${mysql.num.helper.threads}"/>
+        <property name="idleConnectionTestPeriod" value="300"/>
+        <property name="preferredTestQuery" value="SELECT 0"/>
+        <property name="debugUnreturnedConnectionStackTraces" value="true"/>
+        <property name="unreturnedConnectionTimeout" value="${mysql.connection.timeout}"/>
+    </bean>
+
+    <!-- Mysql JPA Config ends-->
+
+</beans>
